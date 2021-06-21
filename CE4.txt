@@ -1,0 +1,119 @@
+
+!
+! Last configuration change at 22:26:54 CET Mon Jun 7 2021
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname CE4
+!!Configuration du routeur CE2, routeur représentant le quatrieme site du client 1. Il est connecté au routeur PE4 via un reseau d'interconnexion sur E0/0
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+clock timezone CET 1 0
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+!
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+redundancy
+!
+!
+! 
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!!Declaration de l'interface pour le réseau d'interconnexion avec PE4 et identitié de service
+interface Loopback0
+ no shutdown
+ ip address 192.168.4.1 255.255.255.255
+!
+!!interface réseau d'interconnexion
+interface Ethernet0/0
+ no shutdown
+ ip address 10.4.0.1 255.255.255.252
+!
+interface Ethernet0/1
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Ethernet0/2
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Ethernet0/3
+ no shutdown
+ no ip address
+ shutdown
+!
+!!Protocole de routage sur le réseau d'interconnexion (RIP v2)
+!!Ici on redistribue les routes directement connectés : adresses de loopback
+router rip
+ version 2
+ redistribute connected
+ network 10.0.0.0
+ no auto-summary
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!!La passerelle par défaut du routeur CE2 est le routeur PE4 lui même
+ip route 0.0.0.0 0.0.0.0 10.4.0.2
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+gateway 
+ timer receive-rtp 1200
+!
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ login
+ transport input all
+!
+!
+end

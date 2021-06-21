@@ -1,0 +1,254 @@
+
+!
+! Last configuration change at 23:41:08 CET Mon Jun 7 2021
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname PE1
+!!Configuration du routeur PE1. Il est directement connecté au routeur CE1 via plusieurs interfaces, chacunes correspondant à un site client ou un service (ici l'accès à internet)
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+clock timezone CET 1 0
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+!
+!
+!
+!!Création des VRF. Ici encore, une VRF par site, et une en plus pour l'accès à internet.
+ip vrf C1-site2
+ rd 700:2
+ route-target export 700:200
+ route-target import 700:200
+!
+ip vrf C1-site3
+ rd 700:3
+ route-target export 700:300
+ route-target import 700:300
+!
+ip vrf C1-site4
+ rd 700:4
+ route-target export 700:400
+ route-target import 700:400
+!
+ip vrf internet
+ rd 700:700
+ route-target export 700:700
+ route-target import 700:700
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+redundancy
+!
+!
+! 
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!!Declaration de l'interface pour le réseau d'interconnexion avec CE1 et identitié de service. Gestion de l'interface vers les routeurs P en activant mpls.
+interface Loopback0
+ no shutdown
+ ip address 11.11.11.11 255.255.255.255
+!
+interface Loopback1
+ no shutdown
+ no ip address
+!
+!!Interface connectée au backbone MPLS
+interface Ethernet0/0
+ no shutdown
+ ip address 172.16.1.1 255.255.255.252
+ mpls ip
+!
+!!Chaque VRF est rattachée à une interface, chaque VRF pour un site différent
+interface Ethernet0/1
+ no shutdown
+ ip vrf forwarding C1-site2
+ ip address 10.0.2.2 255.255.255.252
+!
+interface Ethernet0/2
+ no shutdown
+ ip vrf forwarding C1-site3
+ ip address 10.0.3.2 255.255.255.252
+!
+interface Ethernet0/3
+ no shutdown
+ ip vrf forwarding C1-site4
+ ip address 10.0.4.2 255.255.255.252
+!
+interface Ethernet1/0
+ no shutdown
+ ip vrf forwarding internet
+ ip address 195.10.10.2 255.255.255.252
+!
+interface Ethernet1/1
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Ethernet1/2
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Ethernet1/3
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Serial2/0
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial2/1
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial2/2
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial2/3
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+!!Gestion des protocoles sur les réseaux d'interconnexion. A noter que pour OSPF il est crucial de déclarer que le protocole de routage est utiliser pour alimenter une VRF
+router ospf 999 vrf internet
+ network 195.10.10.0 0.0.0.3 area 0
+ default-information originate
+!
+router ospf 2 vrf C1-site2
+ redistribute bgp 700 metric 10 subnets
+ network 10.0.2.0 0.0.0.3 area 2
+!
+router ospf 4 vrf C1-site4
+ redistribute bgp 700 metric 10 subnets
+ network 10.0.4.0 0.0.0.3 area 4
+!
+router ospf 3 vrf C1-site3
+ redistribute bgp 700 metric 10 subnets
+ network 10.0.3.0 0.0.0.3 area 3
+!
+!!Utilisation OSPF pour le backbone MPLS
+router ospf 1
+ network 11.11.11.11 0.0.0.0 area 0
+ network 172.16.1.0 0.0.0.3 area 0
+!
+!! Mise en oeuvre de MP-BGP pour alimenter toutes les VRF
+!!   il faut :
+!!      une instance pour la negociation des labels entre VRF Internet et les autres VRFs (vpnv4)
+!!      une instance pour transporter les annonces de routage (ipv4) :
+!!
+!!   les peers sont les PEs
+!!   les PEs doivent utiliser MPBGP dans le meme systeme autonome car seul i-BGP
+!!   permet de faire du routage entre routeurs non-voisins
+router bgp 700
+ bgp log-neighbor-changes
+ neighbor 22.22.22.22 remote-as 700
+ neighbor 22.22.22.22 update-source Loopback0
+ neighbor 33.33.33.33 remote-as 700
+ neighbor 33.33.33.33 update-source Loopback0
+ neighbor 44.44.44.44 remote-as 700
+ neighbor 44.44.44.44 update-source Loopback0
+ neighbor 100.100.100.100 remote-as 700
+ neighbor 100.100.100.100 update-source Loopback0
+ !
+ address-family vpnv4
+  neighbor 22.22.22.22 activate
+  neighbor 22.22.22.22 send-community extended
+  neighbor 33.33.33.33 activate
+  neighbor 33.33.33.33 send-community extended
+  neighbor 44.44.44.44 activate
+  neighbor 44.44.44.44 send-community extended
+  neighbor 100.100.100.100 activate
+  neighbor 100.100.100.100 send-community extended
+ exit-address-family
+ !
+!!Redistribution des routes par défaut jusqu'aux routeurs PE
+ address-family ipv4 vrf C1-site2
+  redistribute static
+  default-information originate
+ exit-address-family
+ !
+ address-family ipv4 vrf C1-site3
+  redistribute static
+  default-information originate
+ exit-address-family
+ !
+ address-family ipv4 vrf C1-site4
+  redistribute static
+  default-information originate
+ exit-address-family
+ !
+ address-family ipv4 vrf internet
+  redistribute ospf 999 match internal external 2
+ exit-address-family
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!!Déclaration des passerelle par défaut de chaque VRF vers CE1
+ip route vrf C1-site2 0.0.0.0 0.0.0.0 10.0.2.1
+ip route vrf C1-site4 0.0.0.0 0.0.0.0 10.0.4.1
+ip route vrf C1-site3 0.0.0.0 0.0.0.0 10.0.3.1
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ login
+ transport input all
+!
+!
+end

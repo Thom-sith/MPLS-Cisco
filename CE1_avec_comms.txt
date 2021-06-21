@@ -1,0 +1,147 @@
+
+!
+! Last configuration change at 21:38:26 CET Wed Jun 9 2021
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname CE1
+!!!Fichier de Configuration du routeur CE1
+!!!Il s'agit du routeur central de la topologie Hub & Spoke
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+clock timezone CET 1 0
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+!
+!
+!
+!
+!
+!!Parfois ip cef n'est pas activé par défaut. Cette commande est obligatoire pour permettre le routage avancé
+ip cef 
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+redundancy
+!
+!
+! 
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!!!Déclaration des interfaces pour les réseaux d'interconnexions et identifiant du routeur
+!!!Mise en place du NAT, les réseaux d'interco des sites 2,3,4 comme zone "inside", le réseau d'interco pour l'accès à internet en zone "outside"
+interface Loopback0
+ no shutdown
+ ip address 192.168.1.1 255.255.255.255
+!
+interface Ethernet0/0
+ no shutdown
+ ip address 10.0.1.1 255.255.255.252
+!
+!!Reseau d'interco pour le site 2 du client 1
+interface Ethernet0/1
+ no shutdown
+ ip address 10.0.2.1 255.255.255.252
+ ip nat inside
+ ip virtual-reassembly in
+ ip ospf 200 area 2
+!
+!!Reseau d'interco pour le site 3 du client 1
+interface Ethernet0/2
+ no shutdown
+ ip address 10.0.3.1 255.255.255.252
+ ip nat inside
+ ip virtual-reassembly in
+!
+!!Reseau d'interco pour le site 4 du client 1
+interface Ethernet0/3
+ no shutdown
+ ip address 10.0.4.1 255.255.255.252
+ ip nat inside
+ ip virtual-reassembly in
+ ip ospf 4 area 4
+!
+!!Reseau d'interco permettant l'accès à internet
+interface Ethernet1/0
+ no shutdown
+ ip address 195.10.10.1 255.255.255.252
+ ip nat outside
+ ip virtual-reassembly in
+!
+interface Ethernet1/1
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Ethernet1/2
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Ethernet1/3
+ no shutdown
+ no ip address
+ shutdown
+!
+
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!!Declation de la règle de translation d'adresse
+!!Tous les paquets provenants des réseaux définis en list 100 doivent être translatés avec l'adresse de l'interface Ethernet1/0
+ip nat inside source list 100 interface Ethernet1/0 overload
+!
+!!Access list permettant d'englober les suffixes des sites du client 1
+access-list 1 permit 10.3.0.0 0.0.0.3
+access-list 1 permit 10.2.0.0 0.0.0.3
+access-list 100 permit ip 10.4.0.0 0.0.0.3 any
+access-list 100 permit ip 10.3.0.0 0.0.0.3 any
+access-list 100 permit ip 10.2.0.0 0.0.0.3 any
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ login
+ transport input all
+!
+!
+end

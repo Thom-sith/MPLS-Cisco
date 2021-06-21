@@ -1,0 +1,160 @@
+
+!
+! Last configuration change at 22:40:55 CET Mon Jun 7 2021
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname PE4
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+clock timezone CET 1 0
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+!
+!
+!
+ip vrf C1-site4
+ rd 700:4
+ route-target export 700:400
+ route-target import 700:400
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+redundancy
+!
+!
+! 
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+interface Loopback0
+ no shutdown
+ ip address 44.44.44.44 255.255.255.255
+!
+interface Ethernet0/0
+ no shutdown
+ ip address 172.16.4.1 255.255.255.252
+ mpls ip
+!
+interface Ethernet0/1
+ no shutdown
+ ip vrf forwarding C1-site4
+ ip address 10.4.0.2 255.255.255.252
+!
+interface Ethernet0/2
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Ethernet0/3
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Serial1/0
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/1
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/2
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/3
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+router ospf 1
+ network 44.44.44.44 0.0.0.0 area 0
+ network 172.16.4.0 0.0.0.3 area 0
+!
+router rip
+ !
+ address-family ipv4 vrf C1-site4
+  network 10.0.0.0
+  no auto-summary
+  version 2
+ exit-address-family
+!
+router bgp 700
+ bgp log-neighbor-changes
+ neighbor 11.11.11.11 remote-as 700
+ neighbor 11.11.11.11 update-source Loopback0
+ !
+ address-family vpnv4
+  neighbor 11.11.11.11 activate
+  neighbor 11.11.11.11 send-community extended
+ exit-address-family
+ !
+ address-family ipv4 vrf C1-site4
+  redistribute rip
+ exit-address-family
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ login
+ transport input all
+!
+!
+end

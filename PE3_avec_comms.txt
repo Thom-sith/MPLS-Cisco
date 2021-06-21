@@ -1,0 +1,166 @@
+
+!
+! Last configuration change at 10:26:08 CET Tue Jun 8 2021
+version 15.2
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname PE3
+!!Configuration du routeur PE3. Il est directement connecté au routeur CE3 via un réseau d'interconnexion
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+clock timezone CET 1 0
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+!
+!
+!
+!!Création de la VRF pour le site 3 du client 1. Les valeurs de RT concordent avec celles de la VRF
+!! C1-site3 présentes sur le routeur distant PE1
+ip vrf C1-site3
+ rd 700:3
+ route-target export 700:300
+ route-target import 700:300
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+!
+!
+!
+!
+redundancy
+!
+!
+! 
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!!Declaration de l'interface pour le réseau d'interconnexion avec CE3 et identitié de service. Gestion de l'interface vers les routeurs P en activant mpls.
+interface Loopback0
+ no shutdown
+ ip address 33.33.33.33 255.255.255.255
+!
+!!Interface vers le backbone MPLS
+interface Ethernet0/0
+ no shutdown
+ ip address 172.16.3.2 255.255.255.252
+ mpls ip
+!
+interface Ethernet0/1
+ no shutdown
+ ip vrf forwarding C1-site3
+ ip address 10.3.0.1 255.255.255.252
+!
+interface Ethernet0/2
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Ethernet0/3
+ no shutdown
+ no ip address
+ shutdown
+!
+interface Serial1/0
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/1
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/2
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+interface Serial1/3
+ no shutdown
+ no ip address
+ shutdown
+ serial restart-delay 0
+!
+!!Protocole de routage présent sur le réseau d'interconnexion, permettant à la VRF C1-site3 de connaitre les réseau de CE2
+!!(OSPF)
+router ospf 3 vrf C1-site3
+ network 10.3.0.0 0.0.0.3 area 0
+!
+!!!Protocole de routage backbone MPLS
+router ospf 1
+ network 33.33.33.33 0.0.0.0 area 0
+ network 172.16.3.0 0.0.0.3 area 0
+!
+router bgp 700
+!!Mise en place de MP-BGP avec PE1 (seulement, car Hub & Spoke)
+ bgp log-neighbor-changes
+ neighbor 11.11.11.11 remote-as 700
+ neighbor 11.11.11.11 update-source Loopback0
+ !
+!!Instance permettant de négocier les labels entre VRF
+ address-family vpnv4
+  neighbor 11.11.11.11 activate
+  neighbor 11.11.11.11 send-community extended
+ exit-address-family
+ !
+!!Instance permettant le transport les annonces de routage
+ address-family ipv4 vrf C1-site3
+  redistribute ospf 3 match internal external 1 external 2
+ exit-address-family
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+!
+!
+!
+!
+control-plane
+!
+!
+!
+!
+!
+!
+!
+line con 0
+ logging synchronous
+line aux 0
+line vty 0 4
+ login
+ transport input all
+!
+!
+end
