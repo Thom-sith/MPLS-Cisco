@@ -41,6 +41,6 @@ Une dernière translation dynamique au niveau du routeur IGW permet aux paquets 
 
 ## Conclusion
 
-Ce projet m'a permis de mobiliser de nombreuses bases en réseau : routages, supports de communications, ainsi que les technologies associées. En plus de cela, j'ai pu découvrir la richesse d'utiliser un émulateur de réseau virtuel afin de réellement apprendre par l'exemple, et les erreurs.
+Ce projet m'a permis de mobiliser de nombreuses bases en réseau : routages, supports de communications, ainsi que les technologies associées. En plus de cela, j'ai pu découvrir la richesse d'utiliser un émulateur de réseau virtuel afin de réellement apprendre par l'exemple, et l'erreur.
 
 De nombreuses notions sont encore à éclaircir, traffic engineering, QoS... pour un prochain commit.
